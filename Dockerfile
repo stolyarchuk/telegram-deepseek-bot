@@ -17,8 +17,8 @@ RUN go build -ldflags="-s -w" -o telegram-deepseek-bot main.go
 FROM gcr.io/distroless/base-debian12:nonroot
 
 # Copy only necessary files from builder
-COPY --from=builder --chown=nonroot  /app/telegram-deepseek-bot /telegram-deepseek-bot
-COPY --from=builder --chown=nonroot --exclude=*.go /app/conf /conf
+COPY --from=builder --chown=nonroot /app/telegram-deepseek-bot /telegram-deepseek-bot
+COPY --from=builder --chown=nonroot /app/conf /conf
 
 USER nonroot:nonroot
 WORKDIR /

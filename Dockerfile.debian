@@ -33,7 +33,7 @@ RUN useradd -mU appuser && mkdir -p /data /log && \
 
 # Copy only necessary files from builder
 COPY --from=builder --chown=appuser /app/telegram-deepseek-bot /telegram-deepseek-bot
-COPY --from=builder --chown=appuser --exclude=*.go /app/conf /conf
+COPY --from=builder --chown=appuser /app/conf /conf
 
 WORKDIR /
 USER appuser:appuser
