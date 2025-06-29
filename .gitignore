@@ -2,7 +2,7 @@
 .gigaide
 *.tar.gz
 telegram-deepseek-bot
-telegram_bot.db
+telegram_bot.db*
 .DS_Store
 *.log
 github.com
