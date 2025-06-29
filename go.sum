@@ -644,7 +644,7 @@ github.com/miekg/dns v1.1.26/go.mod h1:bPDLeHnStXmXAq1m/Ch/hvfNHr14JKNPMBo3VZKju
 github.com/miekg/dns v1.1.43/go.mod h1:+evo5L0630/F6ca/Z9+GAqzhjGyn8/c+TBaOyfEl0V4=
 github.com/milvus-io/milvus-proto/go-api/v2 v2.3.6 h1:dvjukoX5NvoX4Q3oHWXb8gi+l1/WuxQ8BaqazqzlCHg=
 github.com/milvus-io/milvus-proto/go-api/v2 v2.3.6/go.mod h1:1OIl0v5PQeNxIJhCvY+K55CBUOYDZevw9g9380u1Wek=
-github.com/milvus-io/milvus-sdk-go/v2 v2.3.6 h1:pPbasW7GauN6ZvJhpKdbyW5uqU7/b61fxvRqDHDho14=
+github.com/milvus-io/milvus-sdk-go/v2 v2.3.6 h1:JVn9OdaronLGmtpxvamQf523mtn3Z/CRxkSZCMWutV4=
 github.com/milvus-io/milvus-sdk-go/v2 v2.3.6/go.mod h1:bYFSXVxEj6A/T8BfiR+xkofKbAVZpWiDvKr3SzYUWiA=
 github.com/minio/highwayhash v1.0.1/go.mod h1:BQskDq+xkJ12lmlUUi7U0M5Swg3EWR+dLTk+kldvVxY=
 github.com/minio/highwayhash v1.0.2/go.mod h1:BQskDq+xkJ12lmlUUi7U0M5Swg3EWR+dLTk+kldvVxY=
