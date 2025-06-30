@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"regexp"
 	"time"
-	
+
 	"github.com/yincongcyincong/telegram-deepseek-bot/conf"
 	"github.com/yincongcyincong/telegram-deepseek-bot/i18n"
 	"github.com/yincongcyincong/telegram-deepseek-bot/logger"
@@ -24,7 +24,7 @@ type McpResult struct {
 func (d *DeepseekTaskReq) ExecuteMcp() {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
 	defer cancel()
-	
+
 	logger.Info("mcp content", "content", d.Content)
 	taskParam := make(map[string]interface{})
 	taskParam["assign_param"] = make([]map[string]string, 0)
@@ -35,12 +35,12 @@ func (d *DeepseekTaskReq) ExecuteMcp() {
 			"tool_desc": tool.Description,
 		})
 	}
-	
+
 	// get mcp request
 	chatId, msgId, _ := utils.GetChatIdAndMsgIdAndUserID(d.Update)
 	llm := NewLLM(WithBot(d.Bot), WithUpdate(d.Update),
 		WithMessageChan(d.MessageChan), WithContent(d.Content))
-	
+
 	prompt := i18n.GetMessage(*conf.Lang, "mcp_prompt", taskParam)
 	llm.LLMClient.GetUserMessage(prompt)
 	llm.Content = prompt
@@ -50,7 +50,7 @@ func (d *DeepseekTaskReq) ExecuteMcp() {
 		utils.SendMsg(chatId, err.Error(), d.Bot, msgId, "")
 		return
 	}
-	
+
 	matches := mcpRe.FindAllString(c, -1)
 	mcpResult := new(McpResult)
 	for _, match := range matches {
@@ -59,7 +59,7 @@ func (d *DeepseekTaskReq) ExecuteMcp() {
 			logger.Error("json umarshal fail", "err", err)
 		}
 	}
-	
+
 	// execute mcp request
 	taskTool := conf.TaskTools[mcpResult.Agent]
 	mcpLLM := NewLLM(WithBot(d.Bot), WithUpdate(d.Update),

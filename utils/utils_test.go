@@ -46,7 +46,7 @@ func TestGetChatIdAndMsgIdAndUserName_MessageUpdate(t *testing.T) {
 func TestUtf16len(t *testing.T) {
 	tests := map[string]int{
 		"hello":   5,
-		"你好":    2,
+		"你好":      2,
 		"𠀀":       2, // surrogate pair in utf16
 		"":        0,
 		"abc𠀀def": 8,

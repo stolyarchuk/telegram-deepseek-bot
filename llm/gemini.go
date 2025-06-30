@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 	"unicode"
-	
+
 	"github.com/yincongcyincong/mcp-client-go/clients"
 	"github.com/yincongcyincong/telegram-deepseek-bot/conf"
 	"github.com/yincongcyincong/telegram-deepseek-bot/db"
@@ -22,22 +22,22 @@ type GeminiReq struct {
 	ToolCall           []*genai.FunctionCall
 	ToolMessage        []*genai.Content
 	CurrentToolMessage []*genai.Content
-	
+
 	GeminiMsgs []*genai.Content
 }
 
 func (h *GeminiReq) CallLLMAPI(ctx context.Context, prompt string, l *LLM) error {
 	_, _, userId := utils.GetChatIdAndMsgIdAndUserID(l.Update)
-	
+
 	h.GetMessages(userId, prompt)
-	
+
 	logger.Info("msg receive", "userID", userId, "prompt", l.Content)
 	return h.Send(ctx, l)
 }
 
 func (h *GeminiReq) GetMessages(userId int64, prompt string) {
 	messages := make([]*genai.Content, 0)
-	
+
 	msgRecords := db.GetMsgRecord(userId)
 	if msgRecords != nil {
 		aqs := msgRecords.AQs
@@ -48,7 +48,7 @@ func (h *GeminiReq) GetMessages(userId int64, prompt string) {
 			if record.Answer != "" && record.Question != "" {
 				logger.Info("context content", "dialog", i, "question:", record.Question,
 					"toolContent", record.Content, "answer:", record.Answer)
-				
+
 				messages = append(messages, &genai.Content{
 					Role: genai.RoleUser,
 					Parts: []*genai.Part{
@@ -57,7 +57,7 @@ func (h *GeminiReq) GetMessages(userId int64, prompt string) {
 						},
 					},
 				})
-				
+
 				messages = append(messages, &genai.Content{
 					Role: genai.RoleModel,
 					Parts: []*genai.Part{
@@ -66,11 +66,11 @@ func (h *GeminiReq) GetMessages(userId int64, prompt string) {
 						},
 					},
 				})
-				
+
 			}
 		}
 	}
-	
+
 	h.GeminiMsgs = messages
 }
 
@@ -78,11 +78,11 @@ func (h *GeminiReq) Send(ctx context.Context, l *LLM) error {
 	if l.OverLoop() {
 		return errors.New("too many loops")
 	}
-	
+
 	start := time.Now()
 	_, updateMsgID, userId := utils.GetChatIdAndMsgIdAndUserID(l.Update)
 	h.GetModel(l)
-	
+
 	httpClient := utils.GetDeepseekProxyClient()
 	client, err := genai.NewClient(ctx, &genai.ClientConfig{
 		HTTPClient: httpClient,
@@ -92,7 +92,7 @@ func (h *GeminiReq) Send(ctx context.Context, l *LLM) error {
 		logger.Error("init gemini client fail", "err", err)
 		return err
 	}
-	
+
 	config := &genai.GenerateContentConfig{
 		TopP:             genai.Ptr[float32](float32(*conf.TopP)),
 		FrequencyPenalty: genai.Ptr[float32](float32(*conf.FrequencyPenalty)),
@@ -100,17 +100,17 @@ func (h *GeminiReq) Send(ctx context.Context, l *LLM) error {
 		Temperature:      genai.Ptr[float32](float32(*conf.Temperature)),
 		Tools:            l.GeminiTools,
 	}
-	
+
 	chat, err := client.Chats.Create(ctx, l.Model, config, h.GeminiMsgs)
 	if err != nil {
 		logger.Error("create chat fail", "err", err)
 		return err
 	}
-	
+
 	msgInfoContent := &param.MsgInfo{
 		SendLen: FirstSendLen,
 	}
-	
+
 	hasTools := false
 	for response, err := range chat.SendMessageStream(ctx, *genai.NewPartFromText(l.Content)) {
 		if errors.Is(err, io.EOF) {
@@ -121,7 +121,7 @@ func (h *GeminiReq) Send(ctx context.Context, l *LLM) error {
 			logger.Error("stream error:", "updateMsgID", updateMsgID, "err", err)
 			break
 		}
-		
+
 		toolCalls := response.FunctionCalls()
 		if len(toolCalls) > 0 {
 			hasTools = true
@@ -134,22 +134,22 @@ func (h *GeminiReq) Send(ctx context.Context, l *LLM) error {
 				}
 			}
 		}
-		
+
 		if len(response.Text()) > 0 {
 			msgInfoContent = l.sendMsg(msgInfoContent, response.Text())
 		}
-		
+
 		if response.UsageMetadata != nil {
 			l.Token += int(response.UsageMetadata.TotalTokenCount)
 			metrics.TotalTokens.Add(float64(l.Token))
 		}
-		
+
 	}
-	
+
 	if len(strings.TrimRightFunc(msgInfoContent.Content, unicode.IsSpace)) > 0 {
 		l.MessageChan <- msgInfoContent
 	}
-	
+
 	if !hasTools || len(h.CurrentToolMessage) == 0 {
 		db.InsertMsgRecord(userId, &db.AQ{
 			Question: l.Content,
@@ -163,7 +163,7 @@ func (h *GeminiReq) Send(ctx context.Context, l *LLM) error {
 		h.ToolCall = make([]*genai.FunctionCall, 0)
 		return h.Send(ctx, l)
 	}
-	
+
 	// record time costing in dialog
 	totalDuration := time.Since(start).Seconds()
 	metrics.ConversationDuration.Observe(totalDuration)
@@ -182,7 +182,7 @@ func (h *GeminiReq) AppendMessages(client LLMClient) {
 	if len(h.GeminiMsgs) == 0 {
 		h.GeminiMsgs = make([]*genai.Content, 0)
 	}
-	
+
 	h.GeminiMsgs = append(h.GeminiMsgs, client.(*GeminiReq).GeminiMsgs...)
 }
 
@@ -200,7 +200,7 @@ func (h *GeminiReq) GetMessage(role, msg string) {
 		}
 		return
 	}
-	
+
 	h.GeminiMsgs = append(h.GeminiMsgs, &genai.Content{
 		Role: role,
 		Parts: []*genai.Part{
@@ -214,7 +214,7 @@ func (h *GeminiReq) GetMessage(role, msg string) {
 func (h *GeminiReq) SyncSend(ctx context.Context, l *LLM) (string, error) {
 	_, updateMsgID, _ := utils.GetChatIdAndMsgIdAndUserID(l.Update)
 	h.GetModel(l)
-	
+
 	httpClient := utils.GetDeepseekProxyClient()
 	client, err := genai.NewClient(ctx, &genai.ClientConfig{
 		HTTPClient: httpClient,
@@ -224,7 +224,7 @@ func (h *GeminiReq) SyncSend(ctx context.Context, l *LLM) (string, error) {
 		logger.Error("init gemini client fail", "err", err)
 		return "", err
 	}
-	
+
 	config := &genai.GenerateContentConfig{
 		TopP:             genai.Ptr[float32](float32(*conf.TopP)),
 		FrequencyPenalty: genai.Ptr[float32](float32(*conf.FrequencyPenalty)),
@@ -232,42 +232,42 @@ func (h *GeminiReq) SyncSend(ctx context.Context, l *LLM) (string, error) {
 		Temperature:      genai.Ptr[float32](float32(*conf.Temperature)),
 		Tools:            l.GeminiTools,
 	}
-	
+
 	chat, err := client.Chats.Create(ctx, l.Model, config, h.GeminiMsgs)
 	if err != nil {
 		logger.Error("create chat fail", "updateMsgID", updateMsgID, "err", err)
 		return "", err
 	}
-	
+
 	response, err := chat.Send(ctx, genai.NewPartFromText(l.Content))
 	if err != nil {
 		logger.Error("create chat fail", "err", err)
 		return "", err
 	}
-	
+
 	l.Token += int(response.UsageMetadata.TotalTokenCount)
 	if len(response.FunctionCalls()) > 0 {
 		h.requestOneToolsCall(ctx, response.FunctionCalls())
 	}
-	
+
 	return response.Text(), nil
 }
 
 func (h *GeminiReq) requestOneToolsCall(ctx context.Context, toolsCall []*genai.FunctionCall) {
 	for _, tool := range toolsCall {
-		
+
 		mc, err := clients.GetMCPClientByToolName(tool.Name)
 		if err != nil {
 			logger.Warn("get mcp fail", "err", err, "name", tool.Name, "args", tool.Args)
 			return
 		}
-		
+
 		toolsData, err := mc.ExecTools(ctx, tool.Name, tool.Args)
 		if err != nil {
 			logger.Warn("exec tools fail", "err", err, "name", tool.Name, "args", tool.Args)
 			return
 		}
-		
+
 		h.GeminiMsgs = append(h.GeminiMsgs, &genai.Content{
 			Role: genai.RoleModel,
 			Parts: []*genai.Part{
@@ -276,7 +276,7 @@ func (h *GeminiReq) requestOneToolsCall(ctx context.Context, toolsCall []*genai.
 				},
 			},
 		})
-		
+
 		h.GeminiMsgs = append(h.GeminiMsgs, &genai.Content{
 			Role: genai.RoleModel,
 			Parts: []*genai.Part{
@@ -289,34 +289,34 @@ func (h *GeminiReq) requestOneToolsCall(ctx context.Context, toolsCall []*genai.
 				},
 			},
 		})
-		
+
 		logger.Info("exec tool", "name", tool.Name, "args", tool.Args, "toolsData", toolsData)
 	}
 }
 
 func (h *GeminiReq) requestToolsCall(ctx context.Context, response *genai.GenerateContentResponse) error {
-	
+
 	for _, toolCall := range response.FunctionCalls() {
-		
+
 		if toolCall.Name != "" {
 			h.ToolCall = append(h.ToolCall, toolCall)
 			h.ToolCall[len(h.ToolCall)-1].Name = toolCall.Name
 		}
-		
+
 		if toolCall.ID != "" {
 			h.ToolCall[len(h.ToolCall)-1].ID = toolCall.ID
 		}
-		
+
 		if toolCall.Args != nil {
 			h.ToolCall[len(h.ToolCall)-1].Args = toolCall.Args
 		}
-		
+
 		mc, err := clients.GetMCPClientByToolName(h.ToolCall[len(h.ToolCall)-1].Name)
 		if err != nil {
 			logger.Warn("get mcp fail", "err", err)
 			return err
 		}
-		
+
 		toolsData, err := mc.ExecTools(ctx, h.ToolCall[len(h.ToolCall)-1].Name, h.ToolCall[len(h.ToolCall)-1].Args)
 		if err != nil {
 			logger.Warn("exec tools fail", "err", err)
@@ -330,7 +330,7 @@ func (h *GeminiReq) requestToolsCall(ctx context.Context, response *genai.Genera
 				},
 			},
 		})
-		
+
 		h.CurrentToolMessage = append(h.CurrentToolMessage, &genai.Content{
 			Role: genai.RoleModel,
 			Parts: []*genai.Part{
@@ -346,13 +346,13 @@ func (h *GeminiReq) requestToolsCall(ctx context.Context, response *genai.Genera
 		logger.Info("send tool request", "function", toolCall.Name,
 			"toolCall", toolCall.ID, "argument", toolCall.Args, "toolsData", toolsData)
 	}
-	
+
 	return nil
 }
 
 func (h *GeminiReq) GetModel(l *LLM) {
 	_, _, userId := utils.GetChatIdAndMsgIdAndUserID(l.Update)
-	
+
 	l.Model = param.ModelGemini20Flash
 	userInfo, err := db.GetUserByID(userId)
 	if err != nil {

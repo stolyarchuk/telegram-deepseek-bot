@@ -1,27 +1,31 @@
-# 使用 Go 官方镜像作为基础镜像
-FROM golang:1.24
+# Build stage
+FROM golang:1.24-bookworm AS builder
 
-# 设置工作目录
 WORKDIR /app
 
-# 复制项目文件到容器内
+# First copy only dependency files for better layer caching
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go mod download
+
+# Copy the rest of the application
 COPY . .
 
-# 下载依赖
-RUN go mod tidy
+# Build the application (static binary required for distroless)
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=1 GOOS=linux go build -ldflags="-s -w" -o telegram-deepseek-bot main.go
 
-# 编译 Go 程序
-RUN go build -o telegram-deepseek-bot main.go
+# Runtime stage - using Google distroless base debian with nonroot user for glibc linking
+FROM gcr.io/distroless/base-debian12:nonroot
 
-# 设置运行环境变量（可选）
-ENV TELEGRAM_BOT_TOKEN=""
-ENV DEEPSEEK_TOKEN=""
-ENV CUSTOM_URL=""
-ENV DEEPSEEK_TYPE=""
-ENV VOLC_AK=""
-ENV VOLC_SK=""
-ENV DB_TYPE=""
-ENV DB_CONF=""
+# Copy only necessary files from builder
+COPY --from=builder --chown=nonroot /app/telegram-deepseek-bot /telegram-deepseek-bot
+COPY --from=builder --chown=nonroot /app/conf /conf
 
-# 运行程序
-CMD ["./telegram-deepseek-bot"]
+USER nonroot:nonroot
+WORKDIR /
+
+# Runtime command
+CMD ["/telegram-deepseek-bot"]
