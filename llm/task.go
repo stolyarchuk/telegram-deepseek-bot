@@ -6,7 +6,7 @@ import (
 	"errors"
 	"regexp"
 	"time"
-	
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/yincongcyincong/telegram-deepseek-bot/conf"
 	"github.com/yincongcyincong/telegram-deepseek-bot/i18n"
@@ -46,7 +46,7 @@ type TaskResult struct {
 func (d *DeepseekTaskReq) ExecuteTask() {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
 	defer cancel()
-	
+
 	logger.Info("task content", "content", d.Content)
 	taskParam := make(map[string]interface{})
 	taskParam["assign_param"] = make([]map[string]string, 0)
@@ -57,7 +57,7 @@ func (d *DeepseekTaskReq) ExecuteTask() {
 			"tool_desc": tool.Description,
 		})
 	}
-	
+
 	chatId, msgId, _ := utils.GetChatIdAndMsgIdAndUserID(d.Update)
 	prompt := i18n.GetMessage(*conf.Lang, "assign_task_prompt", taskParam)
 	llm := NewLLM(WithBot(d.Bot), WithUpdate(d.Update),
@@ -70,9 +70,9 @@ func (d *DeepseekTaskReq) ExecuteTask() {
 		utils.SendMsg(chatId, err.Error(), d.Bot, msgId, "")
 		return
 	}
-	
+
 	d.Token += llm.Token
-	
+
 	matches := jsonRe.FindAllString(c, -1)
 	plans := new(TaskInfo)
 	for _, match := range matches {
@@ -81,10 +81,10 @@ func (d *DeepseekTaskReq) ExecuteTask() {
 			logger.Warn("json umarshal fail", "err", err)
 		}
 	}
-	
+
 	if len(plans.Plan) == 0 {
 		logger.Info("no plan created!")
-		
+
 		finalLLM := NewLLM(WithBot(d.Bot), WithUpdate(d.Update),
 			WithMessageChan(d.MessageChan), WithContent(d.Content))
 		finalLLM.LLMClient.GetUserMessage(c)
@@ -95,7 +95,7 @@ func (d *DeepseekTaskReq) ExecuteTask() {
 		}
 		return
 	}
-	
+
 	llm.LLMClient.GetAssistantMessage(c)
 	err = d.loopTask(ctx, plans, c, llm, 0)
 	if err != nil {
@@ -103,7 +103,7 @@ func (d *DeepseekTaskReq) ExecuteTask() {
 		utils.SendMsg(chatId, err.Error(), d.Bot, msgId, "")
 		return
 	}
-	
+
 	// summary
 	summaryParam := make(map[string]interface{})
 	summaryParam["user_task"] = d.Content
@@ -122,7 +122,7 @@ func (d *DeepseekTaskReq) loopTask(ctx context.Context, plans *TaskInfo, lastPla
 	if loop > MostLoop {
 		return errors.New("too many loops")
 	}
-	
+
 	completeTasks := map[string]bool{}
 	taskLLM := NewLLM(WithBot(d.Bot), WithUpdate(d.Update),
 		WithMessageChan(d.MessageChan))
@@ -131,7 +131,7 @@ func (d *DeepseekTaskReq) loopTask(ctx context.Context, plans *TaskInfo, lastPla
 		o(taskLLM)
 		taskLLM.LLMClient.GetUserMessage(plan.Description)
 		taskLLM.Content = plan.Description
-		
+
 		logger.Info("execute task", "task", plan.Name)
 		err := d.requestTask(ctx, taskLLM, plan)
 		if err != nil {
@@ -140,29 +140,29 @@ func (d *DeepseekTaskReq) loopTask(ctx context.Context, plans *TaskInfo, lastPla
 		d.Token += taskLLM.Token
 		completeTasks[plan.Description] = true
 	}
-	
+
 	llm.LLMClient.AppendMessages(taskLLM.LLMClient)
-	
+
 	taskParam := map[string]interface{}{
 		"user_task":      d.Content,
 		"complete_tasks": completeTasks,
 		"last_plan":      lastPlan,
 	}
-	
+
 	llm.LLMClient.GetUserMessage(i18n.GetMessage(*conf.Lang, "loop_task_prompt", taskParam))
 	c, err := llm.LLMClient.SyncSend(ctx, llm)
 	if err != nil {
 		logger.Error("ChatCompletionStream error", "err", err)
 		return err
 	}
-	
+
 	if len(c) == 0 {
 		logger.Error("response is emtpy", "response", c)
 		return errors.New("response is emtpy")
 	}
-	
+
 	d.Token += llm.Token
-	
+
 	matches := jsonRe.FindAllString(c, -1)
 	plans = new(TaskInfo)
 	for _, match := range matches {
@@ -171,30 +171,30 @@ func (d *DeepseekTaskReq) loopTask(ctx context.Context, plans *TaskInfo, lastPla
 			logger.Error("json umarshal fail", "err", err)
 		}
 	}
-	
+
 	llm.LLMClient.GetAssistantMessage(c)
-	
+
 	if len(plans.Plan) == 0 {
 		return nil
 	}
-	
+
 	return d.loopTask(ctx, plans, c, llm, loop+1)
 }
 
 // requestTask request task
 func (d *DeepseekTaskReq) requestTask(ctx context.Context, llm *LLM, plan *Task) error {
-	
+
 	c, err := llm.LLMClient.SyncSend(ctx, llm)
 	if err != nil {
 		logger.Error("ChatCompletionStream error", "err", err)
 		return err
 	}
-	
+
 	// deepseek response merge into msg
 	if c == "" {
 		c = plan.Name + " is completed"
 	}
 	llm.LLMClient.GetAssistantMessage(c)
-	
+
 	return nil
 }
