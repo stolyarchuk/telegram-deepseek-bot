@@ -1,6 +1,6 @@
 module github.com/yincongcyincong/telegram-deepseek-bot
 
-go 1.24.0
+go 1.24.4
 
 require (
 	github.com/cohesion-org/deepseek-go v1.3.2

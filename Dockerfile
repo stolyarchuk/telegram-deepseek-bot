@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.24 AS builder
+FROM golang:1.24-bookworm AS builder
 
 WORKDIR /app
 
@@ -13,7 +13,7 @@ COPY . .
 # Build the application (static binary required for distroless)
 RUN go build -ldflags="-s -w" -o telegram-deepseek-bot main.go
 
-# Runtime stage - using Google distroless static debian with non-root user
+# Runtime stage - using Google distroless base debian with nonroot user for glibc linking
 FROM gcr.io/distroless/base-debian12:nonroot
 
 # Copy only necessary files from builder
