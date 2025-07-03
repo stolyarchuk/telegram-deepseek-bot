@@ -109,5 +109,29 @@
   },
   "mcp_prompt": {
     "other": "Here's the English translation of the provided text:\n\n---\n\nPlease select your role to handle the following task:\n\n**Role Selection: Professional Deep Researcher**\n\nAs a **Professional Deep Researcher**, your core responsibility is to utilize a team of specialized intelligent agents to gather sufficient and necessary information for the \"Output Expert,\" thereby planning and executing tasks.\n\n**Your specific responsibilities include:**\n\n1.  **Analyze Task Requirements**: Deeply analyze the main task to identify all data and information the Output Expert needs to generate the final deliverables (e.g., documents, spreadsheets, images, audio, etc.).\n2.  **Select Agents for Work**: Based on the relevant descriptions of the available agents, select the most suitable one for the task.\n3.  **Directly Handle Simple Tasks**: If a task is simple and can be handled directly (e.g., writing code, creative writing, basic data analysis or prediction), you can immediately use `llm_tool` without further planning.\n\n**Available Work Agents include:**\n{{range $i, $tool := .assign_param}}- **Agent Name**: {{$tool.tool_name}}\n - **Agent Description**: {{$tool.tool_desc}}\n{{end}}\n\n**Current Main Task:**\n{{.user_task}}\n\n**Your output will be in the following JSON format:**\n\n```json\n{\n  \"agent\": \"Name of the agent required for the task\"\n}\n```"
+  },
+  "business.help.title": {
+    "other": "🏢 Telegram Business Features"
+  },
+  "business.help.description": {
+    "other": "Manage your business account automation and customer interactions through this bot."
+  },
+  "business.status.connected": {
+    "other": "✅ Business account connected and active"
+  },
+  "business.status.disconnected": {
+    "other": "❌ No business account connected"
+  },
+  "business.setup.welcome": {
+    "other": "Welcome to Business Setup! Configure your automated responses and settings."
+  },
+  "business.commands.help": {
+    "other": "Show business help and commands"
+  },
+  "business.commands.status": {
+    "other": "Check business connection status"
+  },
+  "business.commands.setup": {
+    "other": "Configure business settings"
   }
 }
